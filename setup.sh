@@ -59,20 +59,20 @@ check_node() {
   fi
 }
 
-# --- npm install ---
+# --- pnpm install ---
 
 install_deps() {
   DEPS_OK="false"
   NATIVE_OK="false"
 
   if [ "$NODE_OK" = "false" ]; then
-    log "Skipping npm install — Node not available"
+    log "Skipping pnpm install — Node not available"
     return
   fi
 
   cd "$PROJECT_ROOT"
 
-  # npm install with --unsafe-perm if root (needed for native modules)
+  # pnpm install with --unsafe-perm if root (needed for native modules)
   local npm_flags=""
   if [ "$IS_ROOT" = "true" ]; then
     npm_flags="--unsafe-perm"

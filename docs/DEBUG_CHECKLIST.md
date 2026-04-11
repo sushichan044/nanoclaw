@@ -154,7 +154,7 @@ grep 'QR\|authentication required\|qr' logs/nanoclaw.log | tail -5
 ls -la store/auth/
 
 # Re-authenticate if needed
-npm run auth
+pnpm run auth
 ```
 
 ## Service Management
@@ -173,5 +173,5 @@ launchctl bootout gui/$(id -u)/com.nanoclaw
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.nanoclaw.plist
 
 # Rebuild after code changes
-npm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+pnpm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw
 ```

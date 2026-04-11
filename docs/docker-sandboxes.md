@@ -69,7 +69,7 @@ Inside the sandbox:
 
 ```bash
 sudo apt-get update && sudo apt-get install -y build-essential python3
-npm config set strict-ssl false
+pnpm config set strict-ssl false
 ```
 
 ## Step 3: Clone and Install NanoClaw
@@ -89,8 +89,8 @@ mv nanoclaw "$WORKSPACE/nanoclaw"
 cd "$WORKSPACE/nanoclaw"
 
 # Install dependencies
-npm install
-npm install https-proxy-agent
+pnpm install
+pnpm add https-proxy-agent
 ```
 
 ## Step 4: Apply Proxy and Sandbox Patches
@@ -99,7 +99,7 @@ NanoClaw needs several patches to work inside a Docker Sandbox. These handle pro
 
 ### 4a. Dockerfile — proxy args for container image build
 
-`npm install` inside `docker build` fails with `SELF_SIGNED_CERT_IN_CHAIN` because the sandbox's MITM proxy presents its own certificate. Add proxy build args to `container/Dockerfile`:
+`pnpm install` inside `docker build` fails with `SELF_SIGNED_CERT_IN_CHAIN` because the sandbox's MITM proxy presents its own certificate. Add proxy build args to `container/Dockerfile`:
 
 Add these lines after the `FROM` line:
 
@@ -110,13 +110,13 @@ ARG https_proxy
 ARG no_proxy
 ARG NODE_EXTRA_CA_CERTS
 ARG npm_config_strict_ssl=true
-RUN npm config set strict-ssl ${npm_config_strict_ssl}
+RUN pnpm config set strict-ssl ${npm_config_strict_ssl}
 ```
 
-And after the `RUN npm install` line:
+And after the `RUN pnpm install --frozen-lockfile` line:
 
 ```dockerfile
-RUN npm config set strict-ssl true
+RUN pnpm config set strict-ssl true
 ```
 
 ### 4b. Build script — forward proxy args
@@ -187,7 +187,7 @@ Patch `setup/container.ts` to pass the same proxy `--build-arg` flags as `build.
 ## Step 5: Build
 
 ```bash
-npm run build
+pnpm run build
 bash container/build.sh
 ```
 
@@ -200,7 +200,7 @@ bash container/build.sh
 npx tsx scripts/apply-skill.ts .claude/skills/add-telegram
 
 # Rebuild after applying the skill
-npm run build
+pnpm run build
 
 # Configure .env
 cat > .env << EOF
@@ -241,7 +241,7 @@ Make sure you configured proxy bypass in [Step 1](#step-1-create-the-sandbox) fi
 npx tsx scripts/apply-skill.ts .claude/skills/add-whatsapp
 
 # Rebuild
-npm run build
+pnpm run build
 
 # Configure .env
 cat > .env << EOF
@@ -279,7 +279,7 @@ Apply both skills, patch both for proxy support, combine the `.env` variables, a
 ## Step 7: Run
 
 ```bash
-npm start
+pnpm start
 ```
 
 You don't need to set `ANTHROPIC_API_KEY` manually. The sandbox proxy intercepts requests and replaces `proxy-managed` with your real key automatically.
@@ -310,10 +310,10 @@ The workspace is mounted via virtiofs. Git's pack file handling can corrupt over
 
 ## Troubleshooting
 
-### npm install fails with SELF_SIGNED_CERT_IN_CHAIN
+### pnpm install fails with SELF_SIGNED_CERT_IN_CHAIN
 
 ```bash
-npm config set strict-ssl false
+pnpm config set strict-ssl false
 ```
 
 ### Container build fails with proxy errors
