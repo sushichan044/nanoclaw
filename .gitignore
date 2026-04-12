@@ -15,9 +15,12 @@ groups/*
 !groups/global/
 groups/main/*
 groups/global/*
+!groups/main/AGENTS.md
 !groups/main/CLAUDE.md
+!groups/global/AGENTS.md
 !groups/global/CLAUDE.md
 !groups/*/CLAUDE.md
+!groups/*/AGENTS.md
 
 # Secrets
 *.keys.json
