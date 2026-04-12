@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import {
+  AGENT_MODEL,
   ASSISTANT_NAME,
   CREDENTIAL_PROXY_PORT,
   DEFAULT_TRIGGER,
@@ -388,6 +389,7 @@ async function runAgent(
         chatJid,
         isMain,
         assistantName: ASSISTANT_NAME,
+        model: AGENT_MODEL,
       },
       (proc, containerName) => queue.registerProcess(chatJid, proc, containerName, group.folder),
       wrappedOnOutput,

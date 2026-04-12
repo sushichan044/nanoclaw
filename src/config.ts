@@ -87,7 +87,8 @@ function resolveConfigTimezone(): string {
 export const TIMEZONE = resolveConfigTimezone();
 
 // Coordinator settings
-export const COORDINATOR_MODEL = process.env.COORDINATOR_MODEL || "claude-opus-4-6";
+export const COORDINATOR_MODEL = process.env.COORDINATOR_MODEL || "claude-sonnet-4-6";
+export const AGENT_MODEL = process.env.AGENT_MODEL || "claude-sonnet-4-6";
 export const COORDINATOR_MAX_HISTORY = Math.max(
   1,
   parseInt(process.env.COORDINATOR_MAX_HISTORY || "20", 10) || 20,

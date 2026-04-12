@@ -2,7 +2,7 @@ import type { ChildProcess } from "child_process";
 import { CronExpressionParser } from "cron-parser";
 import fs from "fs";
 
-import { ASSISTANT_NAME, SCHEDULER_POLL_INTERVAL, TIMEZONE } from "./config.js";
+import { AGENT_MODEL, ASSISTANT_NAME, SCHEDULER_POLL_INTERVAL, TIMEZONE } from "./config.js";
 import type { ContainerOutput } from "./container-runner.js";
 import { runContainerAgent, writeTasksSnapshot } from "./container-runner.js";
 import {
@@ -162,6 +162,7 @@ async function runTask(task: ScheduledTask, deps: SchedulerDependencies): Promis
         isMain,
         isScheduledTask: true,
         assistantName: ASSISTANT_NAME,
+        model: AGENT_MODEL,
         script: task.script || undefined,
       },
       (proc, containerName) =>

@@ -201,4 +201,38 @@ describe("container-runner timeout behavior", () => {
     expect(result.status).toBe("success");
     expect(result.newSessionId).toBe("session-456");
   });
+
+  it("passes model through container stdin input", async () => {
+    let stdinPayload = "";
+    fakeProc.stdin.on("data", (chunk) => {
+      stdinPayload += chunk.toString();
+    });
+
+    const resultPromise = runContainerAgent(
+      testGroup,
+      {
+        ...testInput,
+        model: "claude-opus-4-1",
+      },
+      () => {},
+      async () => {},
+    );
+
+    emitOutputMarker(fakeProc, {
+      status: "success",
+      result: "Done",
+      newSessionId: "session-789",
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    fakeProc.emit("close", 0);
+    await vi.advanceTimersByTimeAsync(10);
+
+    await resultPromise;
+
+    expect(JSON.parse(stdinPayload)).toMatchObject({
+      prompt: "Hello",
+      groupFolder: "test-group",
+      model: "claude-opus-4-1",
+    });
+  });
 });

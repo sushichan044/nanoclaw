@@ -29,6 +29,7 @@ interface ContainerInput {
   isMain: boolean;
   isScheduledTask?: boolean;
   assistantName?: string;
+  model?: string;
   script?: string;
 }
 
@@ -419,6 +420,7 @@ async function runQuery(
     options: {
       cwd: "/workspace/group",
       additionalDirectories: extraDirs.length > 0 ? extraDirs : undefined,
+      model: containerInput.model,
       resume: sessionId,
       resumeSessionAt: resumeAt,
       systemPrompt: globalClaudeMd

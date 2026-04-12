@@ -2,7 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { ASSISTANT_NAME, GROUPS_DIR } from "./config.js";
+import { AGENT_MODEL, ASSISTANT_NAME, GROUPS_DIR } from "./config.js";
 import type { ContainerOutput } from "./container-runner.js";
 import { runContainerAgent } from "./container-runner.js";
 import { isValidGroupFolder, resolveGroupFolderPath } from "./group-folder.js";
@@ -141,6 +141,7 @@ export class WorkspaceManager {
             chatJid: workspaceJid,
             isMain: false,
             assistantName: ASSISTANT_NAME,
+            model: AGENT_MODEL,
           },
           (proc, containerName) =>
             this.deps.queue.registerProcess(workspaceJid, proc, containerName, groupFolder),
