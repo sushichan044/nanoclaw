@@ -201,7 +201,10 @@ async function coordinatorProcessMessages(chatJid: string): Promise<boolean> {
   saveState();
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
-  logger.info({ group: group.name, messageCount: missedMessages.length }, "Coordinator processing messages");
+  logger.info(
+    { group: group.name, messageCount: missedMessages.length },
+    "Coordinator processing messages",
+  );
 
   try {
     await coordinator.processMessage(chatJid, prompt);

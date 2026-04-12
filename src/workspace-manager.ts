@@ -47,7 +47,9 @@ function makeWorkspaceFolder(parentFolder: string, name: string): string {
     .slice(0, maxNameLen);
 
   const folder = `${prefix}${safeName}`;
-  return isValidGroupFolder(folder) ? folder : `ws-${crypto.createHash("sha256").update(`${parentFolder}::${name}`).digest("hex").slice(0, 16)}`;
+  return isValidGroupFolder(folder)
+    ? folder
+    : `ws-${crypto.createHash("sha256").update(`${parentFolder}::${name}`).digest("hex").slice(0, 16)}`;
 }
 
 export interface WorkspaceManagerDeps {

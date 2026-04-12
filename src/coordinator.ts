@@ -97,9 +97,7 @@ function buildSystemPrompt(chatJid: string, workspaceManager: WorkspaceManager):
   const workspaces = workspaceManager.getWorkspaces(chatJid);
   const workspaceSummary =
     workspaces.length > 0
-      ? workspaces
-          .map((w) => `  - ${w.name}: ${w.status} (started ${w.startedAt})`)
-          .join("\n")
+      ? workspaces.map((w) => `  - ${w.name}: ${w.status} (started ${w.startedAt})`).join("\n")
       : "  (none)";
 
   return `You are ${ASSISTANT_NAME}, a personal AI assistant.
@@ -153,10 +151,7 @@ export class Coordinator {
     }
   }
 
-  private async handleToolCalls(
-    chatJid: string,
-    content: ContentBlock[],
-  ): Promise<MessageParam> {
+  private async handleToolCalls(chatJid: string, content: ContentBlock[]): Promise<MessageParam> {
     const results: Anthropic.Messages.ToolResultBlockParam[] = [];
 
     for (const block of content) {
@@ -258,7 +253,10 @@ export class Coordinator {
         });
       } catch (err) {
         logger.error({ chatJid, err }, "Coordinator API error");
-        await this.deps.sendMessage(chatJid, "Sorry, I encountered an error processing your message.");
+        await this.deps.sendMessage(
+          chatJid,
+          "Sorry, I encountered an error processing your message.",
+        );
         return;
       }
 
