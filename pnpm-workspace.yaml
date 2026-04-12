@@ -4,7 +4,8 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
 
-minimumReleaseAge: 1400
+# temporally disabled
+# minimumReleaseAge: 1400
 minimumReleaseAgeExclude:
   - "@typescript/native-preview"
   - "@typescript/native-preview-darwin-arm64"
