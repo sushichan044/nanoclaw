@@ -3,5 +3,10 @@
     "network": {
       "allowedDomains": ["npm.registry.com", "us.i.posthog.com"]
     }
+  },
+  "permissions": {
+    "allow": [
+      "Skill(claude-api)"
+    ]
   }
 }
