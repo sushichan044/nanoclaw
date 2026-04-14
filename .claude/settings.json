@@ -5,8 +5,6 @@
     }
   },
   "permissions": {
-    "allow": [
-      "Skill(claude-api)"
-    ]
+    "allow": ["Skill(claude-api)"]
   }
 }
