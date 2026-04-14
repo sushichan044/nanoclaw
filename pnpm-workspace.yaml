@@ -1,5 +1,6 @@
 packages:
   - "container/agent-runner"
+  - "packages/agent-core"
 allowBuilds:
   better-sqlite3: true
   esbuild: true

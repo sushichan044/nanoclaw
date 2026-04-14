@@ -38,20 +38,34 @@ ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 # Install agent-browser and claude-code globally
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm add -g agent-browser @anthropic-ai/claude-code
 
-# Create app directory
-WORKDIR /app
+# Set up pnpm workspace at /ws so @nanoclaw/agent-core resolves correctly
+WORKDIR /ws
 
-# Copy package files first for better caching
-COPY agent-runner/package.json agent-runner/pnpm-lock.yaml ./
+# Copy workspace root config files for package resolution
+COPY pnpm-workspace.yaml ./
+COPY packages/agent-core/package.json ./packages/agent-core/package.json
+COPY packages/agent-core/pnpm-lock.yaml ./packages/agent-core/pnpm-lock.yaml
+COPY container/agent-runner/package.json ./container/agent-runner/package.json
+COPY container/agent-runner/pnpm-lock.yaml ./container/agent-runner/pnpm-lock.yaml
 
-# Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Install dependencies for agent-runner (workspace-aware)
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm --filter nanoclaw-agent-runner install --frozen-lockfile
 
-# Copy source code
-COPY agent-runner/ ./
+# Install build dependencies for agent-core before compiling it
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm --filter @nanoclaw/agent-core install --frozen-lockfile
 
-# Build TypeScript
-RUN pnpm run build
+# Build agent-core first (agent-runner depends on it at runtime)
+COPY packages/agent-core/ ./packages/agent-core/
+RUN pnpm --filter @nanoclaw/agent-core run build
+
+# Copy agent-runner source and build
+COPY container/agent-runner/ ./container/agent-runner/
+RUN pnpm --filter nanoclaw-agent-runner run build
+
+# /app is the conventional path used by entrypoint.sh
+RUN ln -s /ws/container/agent-runner /app
 
 # Create workspace directories
 RUN mkdir -p /workspace/group /workspace/global /workspace/extra /workspace/ipc/messages /workspace/ipc/tasks /workspace/ipc/input

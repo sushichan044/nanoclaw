@@ -97,3 +97,5 @@ export const COORDINATOR_MAX_TOKENS = Math.max(
   256,
   parseInt(process.env.COORDINATOR_MAX_TOKENS || "2048", 10) || 2048,
 );
+export const COORDINATOR_SESSION_DIR = path.resolve(DATA_DIR, "sessions");
+export const COORDINATOR_IPC_DIR = path.resolve(DATA_DIR, "ipc", "_coordinator");
