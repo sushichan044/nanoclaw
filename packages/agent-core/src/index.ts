@@ -1,4 +1,5 @@
-import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKUserMessage, Options as SDKOptions } from "@anthropic-ai/claude-agent-sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
 /**
  * Push-based async iterable for streaming user messages to the SDK.
@@ -47,7 +48,7 @@ export interface AgentCoreOptions {
   sessionId?: string;
   resumeAt?: string;
   onResult?: (text: string) => void | Promise<void>;
-  sdkOptions?: Record<string, unknown>;
+  sdkOptions?: SDKOptions;
 }
 
 /**
@@ -67,6 +68,12 @@ export async function runAgentCore(
   stream: MessageStream,
   options: AgentCoreOptions,
 ): Promise<AgentCoreResult> {
+  if (typeof options.sdkOptions?.settings === "string") {
+    throw new Error(
+      "sdkOptions.settings cannot be a string. It must be an object of type Settings.",
+    );
+  }
+
   let newSessionId: string | undefined;
   let lastAssistantUuid: string | undefined;
 
@@ -77,6 +84,11 @@ export async function runAgentCore(
       resume: options.sessionId,
       resumeSessionAt: options.resumeAt,
       ...options.sdkOptions,
+      settings: {
+        cleanupPeriodDays: 99999,
+        language: "Japanese",
+        ...(options.sdkOptions?.settings ?? {}),
+      },
     },
   })) {
     if (message.type === "system" && message.subtype === "init") {
