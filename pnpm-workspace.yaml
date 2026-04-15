@@ -1,9 +1,9 @@
 packages:
   - "container/agent-runner"
   - "packages/agent-core"
-allowBuilds:
-  better-sqlite3: true
-  esbuild: true
+onlyBuiltDependencies:
+  - better-sqlite3
+  - esbuild
 
 # temporally disabled
 # minimumReleaseAge: 1400
