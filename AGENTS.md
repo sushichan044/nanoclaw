@@ -6,6 +6,14 @@ Personal Claude assistant. See [README.md](README.md) for philosophy and setup. 
 
 Single Node.js process with skill-based channel system. Channels (WhatsApp, Telegram, Slack, Discord, Gmail) are skills that self-register at startup. Messages route to Claude Agent SDK running in containers (Linux VMs). Each group has isolated filesystem and memory.
 
+## Source Of Truth
+
+- Host skill sources now live in `.agents/skills/`.
+- `.claude/skills/` remains as a compatibility layer and contains symlinks into `.agents/skills/`.
+- When editing or resolving conflicts, update `.agents/skills/` and preserve the `.claude/skills/` symlink layout instead of turning those entries back into regular files.
+- If upstream/AppStream content touches skill files, treat `.agents/skills/` as canonical and check whether incoming changes accidentally replace symlinks under `.claude/skills/`.
+- `CLAUDE.md` files are runtime memory/instruction files that agents read inside group workspaces. `AGENTS.md` files are repository/operator guidance for host-side coding agents.
+
 ## Key Files
 
 | File                       | Purpose                                                             |
@@ -18,7 +26,8 @@ Single Node.js process with skill-based channel system. Channels (WhatsApp, Tele
 | `src/container-runner.ts`  | Spawns agent containers with mounts                                 |
 | `src/task-scheduler.ts`    | Runs scheduled tasks                                                |
 | `src/db.ts`                | SQLite operations                                                   |
-| `groups/{name}/CLAUDE.md`  | Per-group memory (isolated)                                         |
+| `groups/{name}/CLAUDE.md`  | Per-group runtime memory/instructions (isolated)                    |
+| `groups/*/AGENTS.md`       | Host-side guidance for coding agents and maintenance workflows      |
 | `container/skills/`        | Skills loaded inside agent containers (browser, status, formatting) |
 
 ## Secrets / Credentials / Proxy (OneCLI)
@@ -28,6 +37,12 @@ API keys, secret keys, OAuth tokens, and auth credentials are managed by the One
 ## Skills
 
 Four types of skills exist in NanoClaw. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full taxonomy and guidelines.
+
+Host-side skill authoring note:
+
+- Author and review host skills in `.agents/skills/`.
+- Keep `.claude/skills/` as the user-facing compatibility path expected by Claude Code.
+- Container runtime skills are separate and still live in `container/skills/`.
 
 - **Feature skills** — merge a `skill/*` branch to add capabilities (e.g. `/add-telegram`, `/add-slack`)
 - **Utility skills** — ship code files alongside SKILL.md (e.g. `/claw`)

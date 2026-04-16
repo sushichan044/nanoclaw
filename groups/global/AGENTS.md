@@ -50,6 +50,14 @@ When you learn something important:
 - Split files larger than 500 lines into folders
 - Keep an index in your memory for the files you create
 
+## Repo Layout Notes
+
+- Runtime memory lives in `CLAUDE.md` files inside mounted workspaces such as `/workspace/group/CLAUDE.md` and `/workspace/global/CLAUDE.md`.
+- Host-side maintenance guidance lives in repository `AGENTS.md` files and is not the same thing as runtime memory.
+- Host skill sources are canonical in `.agents/skills/`.
+- `.claude/skills/` is a compatibility mirror implemented with symlinks into `.agents/skills/`.
+- If you inspect diffs or import upstream/AppStream changes that touch host skills, resolve content against `.agents/skills/` and preserve the `.claude/skills/` symlinks.
+
 ## Message Formatting
 
 Format messages based on the channel you're responding to. Check your group folder name:
