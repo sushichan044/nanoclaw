@@ -1,1 +1,1 @@
-# Diagnostics — opted out
+/Users/sushichan044/workspace/github.com/sushichan044/nanoclaw/.agents/skills/setup/diagnostics.md
