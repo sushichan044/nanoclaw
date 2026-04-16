@@ -13,4 +13,4 @@ import "./discord.js";
 // whatsapp
 
 // emacs
-import './emacs.js';
+import "./emacs.js";
