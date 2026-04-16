@@ -407,6 +407,7 @@ async function runQuery(
         "NotebookEdit",
         "mcp__nanoclaw__*",
         "mcp__qmd__*",
+        "mcp__gmail__*",
       ],
       env: sdkEnv,
       permissionMode: "bypassPermissions",
@@ -425,6 +426,10 @@ async function runQuery(
         qmd: {
           type: "http",
           url: "http://host.docker.internal:8182/mcp",
+        },
+        gmail: {
+          command: "npx",
+          args: ["-y", "@gongrzhe/server-gmail-autoauth-mcp"],
         },
       },
       hooks: {
