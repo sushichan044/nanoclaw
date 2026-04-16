@@ -50,7 +50,11 @@ import {
   loadSenderAllowlist,
   shouldDropMessage,
 } from "./sender-allowlist.js";
-import { extractSessionCommand, handleSessionCommand, isSessionCommandAllowed } from "./session-commands.js";
+import {
+  extractSessionCommand,
+  handleSessionCommand,
+  isSessionCommandAllowed,
+} from "./session-commands.js";
 import { startSchedulerLoop } from "./task-scheduler.js";
 import type { Channel, NewMessage, RegisteredGroup } from "./types.js";
 import { logger } from "./logger.js";
@@ -262,15 +266,20 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       setTyping: (typing) => channel.setTyping?.(chatJid, typing) ?? Promise.resolve(),
       runAgent: (prompt, onOutput) => runAgent(group, prompt, chatJid, onOutput),
       closeStdin: () => queue.closeStdin(chatJid),
-      advanceCursor: (ts) => { lastAgentTimestamp[chatJid] = ts; saveState(); },
+      advanceCursor: (ts) => {
+        lastAgentTimestamp[chatJid] = ts;
+        saveState();
+      },
       formatMessages,
       canSenderInteract: (msg) => {
         const hasTrigger = getTriggerPattern(group.trigger).test(msg.content.trim());
         const reqTrigger = !isMainGroup && group.requiresTrigger !== false;
-        return isMainGroup || !reqTrigger || (hasTrigger && (
-          msg.is_from_me ||
-          isTriggerAllowed(chatJid, msg.sender, loadSenderAllowlist())
-        ));
+        return (
+          isMainGroup ||
+          !reqTrigger ||
+          (hasTrigger &&
+            (msg.is_from_me || isTriggerAllowed(chatJid, msg.sender, loadSenderAllowlist())))
+        );
       },
     },
   });
