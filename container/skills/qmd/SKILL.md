@@ -13,12 +13,14 @@ Search past conversations and documentation in the groups directory.
 QMD MCP server runs on the host at `http://host.docker.internal:8182/mcp`.
 
 Available tools:
+
 - `mcp__qmd__query` - Search with lex/vec/hyde queries
 - `mcp__qmd__get` - Retrieve document by path or docid
 - `mcp__qmd__multi_get` - Batch retrieve by glob pattern
 - `mcp__qmd__status` - Check index health
 
 Example query:
+
 ```json
 {
   "searches": [
