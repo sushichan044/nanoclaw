@@ -233,10 +233,7 @@ export class Coordinator {
       }
     } catch (err) {
       logger.error({ chatJid, err }, "Coordinator agent error");
-      await this.deps.sendMessage(
-        chatJid,
-        "ヨヨヨ〜 エラーが起きちゃったみたい... ごめんねぇ〜"
-      );
+      await this.deps.sendMessage(chatJid, "ヨヨヨ〜 エラーが起きちゃったみたい... ごめんねぇ〜");
     } finally {
       this.stopIpcWatcher(chatJid);
       await this.deps.setTyping?.(chatJid, false);

@@ -99,6 +99,17 @@ export function getServiceManager(): ServiceManager {
 }
 
 export function getNodePath(): string {
+  const stableCandidates = [`${os.homedir()}/.local/share/mise/shims/node`];
+
+  for (const candidate of stableCandidates) {
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return candidate;
+    } catch {
+      // Candidate not available; fall through to shell lookup.
+    }
+  }
+
   try {
     return execSync("command -v node", { encoding: "utf-8" }).trim();
   } catch {

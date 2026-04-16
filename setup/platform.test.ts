@@ -1,3 +1,6 @@
+import fs from "fs";
+import os from "os";
+
 import { describe, it, expect } from "vitest";
 
 import {
@@ -7,6 +10,7 @@ import {
   isHeadless,
   hasSystemd,
   getServiceManager,
+  getNodePath,
   commandExists,
   getNodeVersion,
   getNodeMajorVersion,
@@ -96,6 +100,21 @@ describe("commandExists", () => {
 
   it("returns false for nonexistent command", () => {
     expect(commandExists("this_command_does_not_exist_xyz_123")).toBe(false);
+  });
+});
+
+// --- getNodePath ---
+
+describe("getNodePath", () => {
+  it("returns an existing executable path", () => {
+    const nodePath = getNodePath();
+    expect(fs.existsSync(nodePath)).toBe(true);
+  });
+
+  it("prefers the stable mise shim when available", () => {
+    const miseShim = `${os.homedir()}/.local/share/mise/shims/node`;
+    if (!fs.existsSync(miseShim)) return;
+    expect(getNodePath()).toBe(miseShim);
   });
 });
 
