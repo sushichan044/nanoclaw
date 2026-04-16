@@ -115,3 +115,21 @@ export function detectAuthMode(): AuthMode {
   const secrets = readEnvFile(["ANTHROPIC_API_KEY"]);
   return secrets.ANTHROPIC_API_KEY ? "api-key" : "oauth";
 }
+
+export function getAuthToken(): {
+  type: AuthMode;
+  token: string | null;
+} {
+  const secrets = readEnvFile([
+    "ANTHROPIC_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "ANTHROPIC_AUTH_TOKEN",
+  ]);
+
+  if (secrets.ANTHROPIC_API_KEY) {
+    return { type: "api-key", token: secrets.ANTHROPIC_API_KEY };
+  } else {
+    const oauthToken = secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.ANTHROPIC_AUTH_TOKEN || null;
+    return { type: "oauth", token: oauthToken };
+  }
+}

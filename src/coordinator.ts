@@ -11,7 +11,7 @@ import {
   COORDINATOR_SESSION_DIR,
   CREDENTIAL_PROXY_PORT,
 } from "./config.js";
-import { detectAuthMode } from "./credential-proxy.js";
+import { detectAuthMode, getAuthToken } from "./credential-proxy.js";
 import { logger } from "./logger.js";
 import type { WorkspaceManager } from "./workspace-manager.js";
 
@@ -192,6 +192,7 @@ export class Coordinator {
     stream.end();
 
     this.startIpcWatcher(chatJid, ipcDir);
+    const token = getAuthToken();
 
     try {
       const result = await runAgentCore(stream, {
@@ -221,8 +222,9 @@ export class Coordinator {
             ...process.env,
             HOME: sessionHome,
             ANTHROPIC_BASE_URL: `http://127.0.0.1:${CREDENTIAL_PROXY_PORT}`,
-            ANTHROPIC_API_KEY: "placeholder",
-            ...(this.authMode === "oauth" && { CLAUDE_CODE_OAUTH_TOKEN: "placeholder" }),
+            ...(this.authMode === "api-key"
+              ? { ANTHROPIC_API_KEY: token.token || "placeholder" }
+              : { CLAUDE_CODE_OAUTH_TOKEN: token.token || "placeholder" }),
           },
           settings: { language: "Japanese" },
         },
