@@ -35,8 +35,8 @@ RUN apt-get update && apt-get install -y \
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Install agent-browser and claude-code globally
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm add -g agent-browser @anthropic-ai/claude-code
+# Install agent-browser, claude-code, and QMD globally
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm add -g agent-browser @anthropic-ai/claude-code @tobilu/qmd
 
 # Set up pnpm workspace at /ws so @nanoclaw/agent-core resolves correctly
 WORKDIR /ws

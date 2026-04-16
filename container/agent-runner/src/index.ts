@@ -406,6 +406,7 @@ async function runQuery(
         "Skill",
         "NotebookEdit",
         "mcp__nanoclaw__*",
+        "mcp__qmd__*",
       ],
       env: sdkEnv,
       permissionMode: "bypassPermissions",
@@ -420,6 +421,10 @@ async function runQuery(
             NANOCLAW_GROUP_FOLDER: containerInput.groupFolder,
             NANOCLAW_IS_MAIN: containerInput.isMain ? "1" : "0",
           },
+        },
+        qmd: {
+          type: 'http',
+          url: 'http://host.docker.internal:8182/mcp',
         },
       },
       hooks: {
