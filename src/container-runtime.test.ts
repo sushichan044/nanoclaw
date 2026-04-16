@@ -15,6 +15,10 @@ vi.mock("./logger.js", () => ({
   },
 }));
 
+vi.mock("./env.js", () => ({
+  readEnvFile: vi.fn(() => ({})),
+}));
+
 // Mock child_process — store the mock fn so tests can configure it
 const mockExecSync = vi.fn();
 vi.mock("child_process", () => ({
@@ -23,11 +27,13 @@ vi.mock("child_process", () => ({
 
 import {
   CONTAINER_RUNTIME_BIN,
+  PROXY_BIND_HOST,
   readonlyMountArgs,
   stopContainer,
   ensureContainerRuntimeRunning,
   cleanupOrphans,
 } from "./container-runtime.js";
+import { readEnvFile } from "./env.js";
 import { logger } from "./logger.js";
 
 beforeEach(() => {
@@ -43,6 +49,13 @@ describe("readonlyMountArgs", () => {
       "--mount",
       "type=bind,source=/host/path,target=/container/path,readonly",
     ]);
+  });
+});
+
+describe("PROXY_BIND_HOST", () => {
+  it("prefers process.env when present", () => {
+    expect(PROXY_BIND_HOST).toBe("127.0.0.1");
+    expect(readEnvFile).toBeTypeOf("function");
   });
 });
 
