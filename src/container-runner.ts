@@ -15,6 +15,7 @@ import {
   DATA_DIR,
   GROUPS_DIR,
   IDLE_TIMEOUT,
+  OLLAMA_ADMIN_TOOLS,
   TIMEZONE,
 } from "./config.js";
 import { resolveGroupFolderPath, resolveGroupIpcPath } from "./group-folder.js";
@@ -217,6 +218,11 @@ function buildContainerArgs(
 
   // Pass host timezone so container's local time matches the user's
   args.push("-e", `TZ=${TIMEZONE}`);
+
+  // Forward Ollama admin tools flag if enabled
+  if (OLLAMA_ADMIN_TOOLS) {
+    args.push("-e", "OLLAMA_ADMIN_TOOLS=true");
+  }
 
   // Route API traffic through the credential proxy (containers never see real secrets)
   args.push("-e", `ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}`);
