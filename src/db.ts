@@ -582,7 +582,9 @@ export function setRegisteredGroup(jid: string, group: RegisteredGroup): void {
     throw new Error(`Invalid group folder "${group.folder}" for JID ${jid}`);
   }
   db.prepare(
-    `INSERT OR REPLACE INTO registered_groups (jid, name, folder, trigger_pattern, added_at, container_config, requires_trigger, is_main)
+    `INSERT OR REPLACE INTO registered_groups (
+       jid, name, folder, trigger_pattern, added_at, container_config, requires_trigger, is_main
+     )
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     jid,
