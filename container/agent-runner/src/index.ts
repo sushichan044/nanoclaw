@@ -19,7 +19,13 @@ import path from "path";
 import { execFile } from "child_process";
 import type { HookCallback, PreCompactHookInput } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { type AgentSdkLogger, MessageStream, buildSdkLogEntry } from "@nanoclaw/agent-core";
+import {
+  type AgentContext,
+  type AgentSdkLogger,
+  MessageStream,
+  buildSdkLogEntry,
+  runAgentCore,
+} from "@nanoclaw/agent-core";
 import { fileURLToPath } from "url";
 
 interface ContainerInput {
@@ -79,6 +85,32 @@ function writeOutput(output: ContainerOutput): void {
 
 function log(message: string): void {
   console.error(`[agent-runner] ${message}`);
+}
+
+function readFileIfExists(filePath: string): string | undefined {
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : undefined;
+}
+
+export function buildContainerContext(containerInput: ContainerInput): AgentContext {
+  const personality = readFileIfExists("/workspace/persona/PERSON.md");
+  const relationships = readFileIfExists("/workspace/persona/RELATIONSHIPS.md");
+  const globalInstructions = !containerInput.isMain
+    ? readFileIfExists("/workspace/global/CLAUDE.md")
+    : undefined;
+  const groupInstructions = readFileIfExists("/workspace/group/CLAUDE.md");
+
+  return {
+    ...(personality || relationships
+      ? {
+          persona: {
+            personality: personality ?? "",
+            relationships: relationships ?? "",
+          },
+        }
+      : {}),
+    ...(globalInstructions ? { globalInstructions } : {}),
+    ...(groupInstructions ? { groupInstructions } : {}),
+  };
 }
 
 function getSessionSummary(sessionId: string, transcriptPath: string): string | null {
@@ -362,15 +394,7 @@ async function runQuery(
 
   let newSessionId: string | undefined;
   let lastAssistantUuid: string | undefined;
-  let messageCount = 0;
   let resultCount = 0;
-
-  // Load global CLAUDE.md as additional system context (shared across all groups)
-  const globalClaudeMdPath = "/workspace/global/CLAUDE.md";
-  let globalClaudeMd: string | undefined;
-  if (!containerInput.isMain && fs.existsSync(globalClaudeMdPath)) {
-    globalClaudeMd = fs.readFileSync(globalClaudeMdPath, "utf-8");
-  }
 
   // Discover additional directories mounted at /workspace/extra/*
   // These are passed to the SDK so their CLAUDE.md files are loaded automatically
@@ -388,22 +412,42 @@ async function runQuery(
     log(`Additional directories: ${extraDirs.join(", ")}`);
   }
 
-  let seq = 0;
-  for await (const message of query({
-    prompt: stream,
-    options: {
-      cwd: "/workspace/group",
+  const context = buildContainerContext(containerInput);
+  const trackingLogger: AgentSdkLogger = {
+    write(entry) {
+      sdkLogger.write(entry);
+
+      if (entry.type === "system" && entry.subtype === "init" && entry.session_id) {
+        newSessionId = entry.session_id;
+        log(`Session initialized: ${newSessionId}`);
+      }
+
+      if (entry.type === "system" && entry.subtype === "task_notification") {
+        log(
+          `Task notification: task=${entry.task_id || "unknown"} status=${entry.task_status || "unknown"} summary=${entry.task_summary || ""}`,
+        );
+      }
+    },
+  };
+
+  const result = await runAgentCore(stream, {
+    cwd: "/workspace/group",
+    sessionId,
+    resumeAt,
+    context,
+    sdkLogger: trackingLogger,
+    onResult: async (text: string) => {
+      resultCount++;
+      log(`Result #${resultCount}: text=${text.slice(0, 200)}`);
+      writeOutput({
+        status: "success",
+        result: text,
+        newSessionId: newSessionId ?? result.newSessionId,
+      });
+    },
+    sdkOptions: {
       additionalDirectories: extraDirs.length > 0 ? extraDirs : undefined,
       model: containerInput.model,
-      resume: sessionId,
-      resumeSessionAt: resumeAt,
-      systemPrompt: globalClaudeMd
-        ? {
-            type: "preset" as const,
-            preset: "claude_code" as const,
-            append: globalClaudeMd,
-          }
-        : undefined,
       allowedTools: [
         "Bash",
         "Read",
@@ -457,53 +501,13 @@ async function runQuery(
         language: "Japanese",
       },
     },
-  })) {
-    messageCount++;
-    sdkLogger.write(buildSdkLogEntry(message, seq++));
-    const msgType =
-      message.type === "system"
-        ? `system/${(message as { subtype?: string }).subtype}`
-        : message.type;
-    log(`[msg #${messageCount}] type=${msgType}`);
-
-    if (message.type === "assistant" && "uuid" in message) {
-      lastAssistantUuid = (message as { uuid: string }).uuid;
-    }
-
-    if (message.type === "system" && message.subtype === "init") {
-      newSessionId = message.session_id;
-      log(`Session initialized: ${newSessionId}`);
-    }
-
-    if (
-      message.type === "system" &&
-      (message as { subtype?: string }).subtype === "task_notification"
-    ) {
-      const tn = message as {
-        task_id: string;
-        status: string;
-        summary: string;
-      };
-      log(`Task notification: task=${tn.task_id} status=${tn.status} summary=${tn.summary}`);
-    }
-
-    if (message.type === "result") {
-      resultCount++;
-      const textResult = "result" in message ? (message as { result?: string }).result : null;
-      log(
-        `Result #${resultCount}: subtype=${message.subtype}${textResult ? ` text=${textResult.slice(0, 200)}` : ""}`,
-      );
-      writeOutput({
-        status: "success",
-        result: textResult || null,
-        newSessionId,
-      });
-    }
-  }
+  });
+  newSessionId = result.newSessionId;
+  lastAssistantUuid = result.lastAssistantUuid;
 
   ipcPolling = false;
   log(
-    `Query done. Messages: ${messageCount}, results: ${resultCount}, lastAssistantUuid: ${lastAssistantUuid || "none"}, closedDuringQuery: ${closedDuringQuery}`,
+    `Query done. Results: ${resultCount}, lastAssistantUuid: ${lastAssistantUuid || "none"}, closedDuringQuery: ${closedDuringQuery}`,
   );
   return { newSessionId, lastAssistantUuid, closedDuringQuery };
 }

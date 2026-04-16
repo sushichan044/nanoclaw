@@ -1,9 +1,3 @@
-@../persona/PERSON.md
-
-@../persona/RELATIONSHIPS.md
-
----
-
 ## What You Can Do
 
 - Answer questions and have conversations

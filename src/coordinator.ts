@@ -2,16 +2,26 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { type AgentSdkLogger, MessageStream, runAgentCore } from "@nanoclaw/agent-core";
+import {
+  type AgentContext,
+  type AgentSdkLogger,
+  type ChannelType,
+  MessageStream,
+  runAgentCore,
+} from "@nanoclaw/agent-core";
 
 import {
-  ASSISTANT_NAME,
   COORDINATOR_IPC_DIR,
   COORDINATOR_MODEL,
   COORDINATOR_SESSION_DIR,
   CREDENTIAL_PROXY_PORT,
+  GROUPS_DIR,
+  PERSONA_DIR,
 } from "./config.js";
-import { detectAuthMode, getAuthToken } from "./credential-proxy.js";
+import { detectAuthMode } from "./credential-proxy.js";
+import { getRegisteredGroup } from "./db.js";
+import { readEnvFile } from "./env.js";
+import { resolveGroupFolderPath } from "./group-folder.js";
 import { logger } from "./logger.js";
 import type { WorkspaceManager } from "./workspace-manager.js";
 
@@ -33,23 +43,22 @@ export interface CoordinatorDeps {
   setTyping?: (chatJid: string, typing: boolean) => Promise<void>;
 }
 
-function buildSystemPrompt(chatJid: string, workspaceManager: WorkspaceManager): string {
-  const workspaces = workspaceManager.getWorkspaces(chatJid);
-  const workspaceSummary =
-    workspaces.length > 0
-      ? workspaces.map((w) => `  - ${w.name}: ${w.status} (started ${w.startedAt})`).join("\n")
-      : "  (none)";
+function readFileIfExists(filePath: string): string {
+  try {
+    return fs.readFileSync(filePath, "utf-8");
+  } catch {
+    return "";
+  }
+}
 
-  return `You are ${ASSISTANT_NAME}, a personal AI assistant.
-
-You receive messages from the user and decide how to respond.
-For simple questions or conversation, reply naturally in text.
-For heavy tasks (file operations, code execution, research, long-running work), use start_workspace to launch a background workspace container. The workspace will send progress updates as it works.
-Use send_to_workspace for follow-up instructions to a running workspace, workspace_status to check status, and stop_workspace to stop one.
-
-<active_workspaces>
-${workspaceSummary}
-</active_workspaces>`;
+function getChannelType(folder: string | undefined): ChannelType | undefined {
+  if (!folder) return undefined;
+  if (folder === "main") return "main";
+  if (folder.startsWith("slack_")) return "slack";
+  if (folder.startsWith("whatsapp_")) return "whatsapp";
+  if (folder.startsWith("telegram_")) return "telegram";
+  if (folder.startsWith("discord_")) return "discord";
+  return undefined;
 }
 
 const SDK_LOG_PATH = path.resolve(process.cwd(), "logs", "coordinator-sdk.jsonl");
@@ -66,7 +75,20 @@ function createSdkLogger(chatJid: string): AgentSdkLogger {
 export class Coordinator {
   private sessions = new Map<string, string>(); // chatJid → sessionId
   private ipcIntervals = new Map<string, NodeJS.Timeout>(); // chatJid → interval
-  private authMode = detectAuthMode();
+  private groupClaudeCache = new Map<string, string>();
+  private readonly authMode = detectAuthMode();
+  private readonly secrets = readEnvFile([
+    "ANTHROPIC_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "ANTHROPIC_AUTH_TOKEN",
+  ]);
+  private readonly persona = {
+    personality: readFileIfExists(path.join(PERSONA_DIR, "PERSON.md")),
+    relationships: readFileIfExists(path.join(PERSONA_DIR, "RELATIONSHIPS.md")),
+  };
+  private readonly globalInstructions = readFileIfExists(
+    path.join(GROUPS_DIR, "global", "CLAUDE.md"),
+  );
 
   constructor(private deps: CoordinatorDeps) {}
 
@@ -192,13 +214,46 @@ export class Coordinator {
     stream.end();
 
     this.startIpcWatcher(chatJid, ipcDir);
-    const token = getAuthToken();
+
+    const group = getRegisteredGroup(chatJid);
+    const groupInstructions = group
+      ? (this.groupClaudeCache.get(group.folder) ??
+        (() => {
+          const content = readFileIfExists(
+            path.join(resolveGroupFolderPath(group.folder), "CLAUDE.md"),
+          );
+          this.groupClaudeCache.set(group.folder, content);
+          return content;
+        })())
+      : undefined;
+
+    const workspaces = this.deps.workspaceManager.getWorkspaces(chatJid);
+    const workspaceSummary =
+      workspaces.length > 0
+        ? workspaces.map((w) => `  - ${w.name}: ${w.status} (started ${w.startedAt})`).join("\n")
+        : "  (none)";
+
+    const context: AgentContext = {
+      persona: this.persona,
+      globalInstructions: this.globalInstructions || undefined,
+      groupInstructions,
+      channelType: getChannelType(group?.folder),
+      extraInstructions: `You receive messages from the user and decide how to respond.
+For simple questions or conversation, reply naturally in text.
+For heavy tasks (file operations, code execution, research, long-running work), use start_workspace to launch a background workspace container. The workspace will send progress updates as it works.
+Use send_to_workspace for follow-up instructions to a running workspace, workspace_status to check status, and stop_workspace to stop one.
+
+<active_workspaces>
+${workspaceSummary}
+</active_workspaces>`,
+    };
 
     try {
       const result = await runAgentCore(stream, {
         cwd: process.cwd(),
         sessionId: this.sessions.get(chatJid),
         sdkLogger: createSdkLogger(chatJid),
+        context,
         onResult: async (text: string) => {
           await this.deps.sendMessage(chatJid, text);
         },
@@ -207,7 +262,6 @@ export class Coordinator {
           allowedTools: ["WebSearch", "WebFetch", "mcp__coordinator__*"],
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          systemPrompt: buildSystemPrompt(chatJid, this.deps.workspaceManager),
           mcpServers: {
             coordinator: {
               command: "node",
@@ -223,8 +277,14 @@ export class Coordinator {
             HOME: sessionHome,
             ANTHROPIC_BASE_URL: `http://127.0.0.1:${CREDENTIAL_PROXY_PORT}`,
             ...(this.authMode === "api-key"
-              ? { ANTHROPIC_API_KEY: token.token || "placeholder" }
-              : { CLAUDE_CODE_OAUTH_TOKEN: token.token || "placeholder" }),
+              ? { ANTHROPIC_API_KEY: this.secrets.ANTHROPIC_API_KEY ?? "placeholder" }
+              : {
+                  ANTHROPIC_API_KEY: "placeholder",
+                  CLAUDE_CODE_OAUTH_TOKEN:
+                    this.secrets.CLAUDE_CODE_OAUTH_TOKEN ??
+                    this.secrets.ANTHROPIC_AUTH_TOKEN ??
+                    "placeholder",
+                }),
           },
           settings: { language: "Japanese" },
         },

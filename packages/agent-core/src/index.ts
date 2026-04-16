@@ -106,6 +106,33 @@ export function buildSdkLogEntry(sdkMsg: unknown, seq: number): AgentSdkLogEntry
   return entry;
 }
 
+export interface AgentPersona {
+  personality: string;
+  relationships: string;
+}
+
+export type ChannelType = "slack" | "whatsapp" | "telegram" | "discord" | "main";
+
+export interface AgentContext {
+  persona?: AgentPersona;
+  globalInstructions?: string;
+  groupInstructions?: string;
+  channelType?: ChannelType;
+  extraInstructions?: string;
+}
+
+function buildSystemPromptFromContext(context: AgentContext): string {
+  return [
+    context.persona?.personality,
+    context.persona?.relationships,
+    context.globalInstructions,
+    context.groupInstructions,
+    context.extraInstructions,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 /**
  * Options for running the agent core.
  */
@@ -116,6 +143,7 @@ export interface AgentCoreOptions {
   onResult?: (text: string) => void | Promise<void>;
   sdkOptions?: SDKOptions;
   sdkLogger?: AgentSdkLogger;
+  context?: AgentContext;
 }
 
 /**
@@ -141,6 +169,10 @@ export async function runAgentCore(
     );
   }
 
+  const systemPrompt = options.context
+    ? buildSystemPromptFromContext(options.context)
+    : options.sdkOptions?.systemPrompt;
+
   let newSessionId: string | undefined;
   let lastAssistantUuid: string | undefined;
   let seq = 0;
@@ -152,6 +184,7 @@ export async function runAgentCore(
       resume: options.sessionId,
       resumeSessionAt: options.resumeAt,
       ...options.sdkOptions,
+      ...(systemPrompt !== undefined && { systemPrompt }),
       settings: {
         cleanupPeriodDays: 99999,
         language: "Japanese",
