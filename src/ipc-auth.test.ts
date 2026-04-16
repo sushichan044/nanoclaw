@@ -1,4 +1,14 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("./container-runtime.js", () => ({
+  CONTAINER_RUNTIME_BIN: "container",
+  CONTAINER_HOST_GATEWAY: "192.168.64.1",
+  PROXY_BIND_HOST: "127.0.0.1",
+  readonlyMountArgs: vi.fn(() => []),
+  stopContainer: vi.fn(),
+  ensureContainerRuntimeRunning: vi.fn(),
+  cleanupOrphans: vi.fn(),
+}));
 
 import {
   _initTestDatabase,

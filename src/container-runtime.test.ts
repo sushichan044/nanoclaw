@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Set CREDENTIAL_PROXY_HOST before module evaluation to satisfy top-level check
+vi.hoisted(() => {
+  process.env.CREDENTIAL_PROXY_HOST = "127.0.0.1";
+});
+
 // Mock logger
 vi.mock("./logger.js", () => ({
   logger: {
