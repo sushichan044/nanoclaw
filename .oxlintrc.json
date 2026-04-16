@@ -14,7 +14,7 @@
     "typeCheck": true,
     "maxWarnings": 0
   },
-  "ignorePatterns": [".claude/**"],
+  "ignorePatterns": [".agents/**", ".claude/**"],
   "overrides": [
     {
       "files": ["**/*.{js,jsx,mjs,cjs}"],
