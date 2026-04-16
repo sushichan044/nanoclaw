@@ -19,7 +19,7 @@ import path from "path";
 import { execFile } from "child_process";
 import type { HookCallback, PreCompactHookInput } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { MessageStream } from "@nanoclaw/agent-core";
+import { type AgentSdkLogger, MessageStream, buildSdkLogEntry } from "@nanoclaw/agent-core";
 import { fileURLToPath } from "url";
 
 interface ContainerInput {
@@ -307,12 +307,29 @@ function waitForIpcMessage(): Promise<string | null> {
  * allowing agent teams subagents to run to completion.
  * Also pipes IPC messages into the stream during the query.
  */
+function createContainerSdkLogger(): AgentSdkLogger {
+  const logsDir = "/workspace/group/logs";
+  fs.mkdirSync(logsDir, { recursive: true });
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const logPath = `${logsDir}/agent-sdk-${ts}.jsonl`;
+  return {
+    write(entry) {
+      try {
+        fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
+      } catch {
+        /* ignore write errors to avoid disrupting the agent */
+      }
+    },
+  };
+}
+
 async function runQuery(
   prompt: string,
   sessionId: string | undefined,
   mcpServerPath: string,
   containerInput: ContainerInput,
   sdkEnv: Record<string, string | undefined>,
+  sdkLogger: AgentSdkLogger,
   resumeAt?: string,
 ): Promise<{
   newSessionId?: string;
@@ -371,6 +388,7 @@ async function runQuery(
     log(`Additional directories: ${extraDirs.join(", ")}`);
   }
 
+  let seq = 0;
   for await (const message of query({
     prompt: stream,
     options: {
@@ -441,6 +459,7 @@ async function runQuery(
     },
   })) {
     messageCount++;
+    sdkLogger.write(buildSdkLogEntry(message, seq++));
     const msgType =
       message.type === "system"
         ? `system/${(message as { subtype?: string }).subtype}`
@@ -602,12 +621,15 @@ async function main(): Promise<void> {
   const trimmedPrompt = prompt.trim();
   const isSessionSlashCommand = KNOWN_SESSION_COMMANDS.has(trimmedPrompt);
 
+  const sdkLogger = createContainerSdkLogger();
+
   if (isSessionSlashCommand) {
     log(`Handling session command: ${trimmedPrompt}`);
     let slashSessionId: string | undefined;
     let compactBoundarySeen = false;
     let hadError = false;
     let resultEmitted = false;
+    let slashSeq = 0;
 
     try {
       for await (const message of query({
@@ -626,6 +648,7 @@ async function main(): Promise<void> {
           },
         },
       })) {
+        sdkLogger.write(buildSdkLogEntry(message, slashSeq++));
         const msgType =
           message.type === "system"
             ? `system/${(message as { subtype?: string }).subtype}`
@@ -731,6 +754,7 @@ async function main(): Promise<void> {
         mcpServerPath,
         containerInput,
         sdkEnv,
+        sdkLogger,
         resumeAt,
       );
       if (queryResult.newSessionId) {

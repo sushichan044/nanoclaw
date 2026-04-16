@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { MessageStream, runAgentCore } from "@nanoclaw/agent-core";
+import { type AgentSdkLogger, MessageStream, runAgentCore } from "@nanoclaw/agent-core";
 
 import {
   ASSISTANT_NAME,
@@ -50,6 +50,17 @@ Use send_to_workspace for follow-up instructions to a running workspace, workspa
 <active_workspaces>
 ${workspaceSummary}
 </active_workspaces>`;
+}
+
+const SDK_LOG_PATH = path.resolve(process.cwd(), "logs", "coordinator-sdk.jsonl");
+
+function createSdkLogger(chatJid: string): AgentSdkLogger {
+  fs.mkdirSync(path.dirname(SDK_LOG_PATH), { recursive: true });
+  return {
+    write(entry) {
+      fs.appendFileSync(SDK_LOG_PATH, JSON.stringify({ ...entry, chatJid }) + "\n");
+    },
+  };
 }
 
 export class Coordinator {
@@ -186,6 +197,7 @@ export class Coordinator {
       const result = await runAgentCore(stream, {
         cwd: process.cwd(),
         sessionId: this.sessions.get(chatJid),
+        sdkLogger: createSdkLogger(chatJid),
         onResult: async (text: string) => {
           await this.deps.sendMessage(chatJid, text);
         },
@@ -223,7 +235,7 @@ export class Coordinator {
       logger.error({ chatJid, err }, "Coordinator agent error");
       await this.deps.sendMessage(
         chatJid,
-        "Sorry, I encountered an error processing your message.",
+        "ヨヨヨ〜 エラーが起きちゃったみたい... ごめんねぇ〜"
       );
     } finally {
       this.stopIpcWatcher(chatJid);

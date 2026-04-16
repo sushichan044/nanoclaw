@@ -40,6 +40,72 @@ export class MessageStream {
   }
 }
 
+export interface AgentSdkLogEntry {
+  ts: string;
+  seq: number;
+  type: string;
+  subtype?: string;
+  session_id?: string;
+  tool_name?: string;
+  tool_input_preview?: string;
+  text_preview?: string;
+  result_preview?: string;
+  task_id?: string;
+  task_status?: string;
+  task_summary?: string;
+}
+
+export interface AgentSdkLogger {
+  write(entry: AgentSdkLogEntry): void;
+}
+
+export function buildSdkLogEntry(sdkMsg: unknown, seq: number): AgentSdkLogEntry {
+  const msg = sdkMsg as Record<string, unknown>;
+  const type = typeof msg.type === "string" ? msg.type : "unknown";
+  const subtype = typeof msg.subtype === "string" ? msg.subtype : undefined;
+
+  const entry: AgentSdkLogEntry = {
+    ts: new Date().toISOString(),
+    seq,
+    type,
+    ...(subtype !== undefined && { subtype }),
+  };
+
+  if (type === "system" && subtype === "init" && typeof msg.session_id === "string") {
+    entry.session_id = msg.session_id;
+  }
+
+  if (type === "system" && subtype === "task_notification") {
+    if (typeof msg.task_id === "string") entry.task_id = msg.task_id;
+    if (typeof msg.status === "string") entry.task_status = msg.status;
+    if (typeof msg.summary === "string") entry.task_summary = msg.summary;
+  }
+
+  if (type === "assistant") {
+    const assistantMsg = msg.message as Record<string, unknown> | undefined;
+    const content = assistantMsg?.content;
+    if (Array.isArray(content)) {
+      for (const block of content as Array<Record<string, unknown>>) {
+        if (block.type === "text" && typeof block.text === "string") {
+          entry.text_preview = block.text.slice(0, 200);
+          break;
+        }
+        if (block.type === "tool_use" && typeof block.name === "string") {
+          entry.tool_name = block.name;
+          entry.tool_input_preview = JSON.stringify(block.input ?? {}).slice(0, 200);
+          break;
+        }
+      }
+    }
+  }
+
+  if (type === "result" && typeof msg.result === "string") {
+    entry.result_preview = msg.result.slice(0, 300);
+  }
+
+  return entry;
+}
+
 /**
  * Options for running the agent core.
  */
@@ -49,6 +115,7 @@ export interface AgentCoreOptions {
   resumeAt?: string;
   onResult?: (text: string) => void | Promise<void>;
   sdkOptions?: SDKOptions;
+  sdkLogger?: AgentSdkLogger;
 }
 
 /**
@@ -76,6 +143,7 @@ export async function runAgentCore(
 
   let newSessionId: string | undefined;
   let lastAssistantUuid: string | undefined;
+  let seq = 0;
 
   for await (const message of query({
     prompt: stream,
@@ -91,6 +159,8 @@ export async function runAgentCore(
       },
     },
   })) {
+    options.sdkLogger?.write(buildSdkLogEntry(message, seq++));
+
     if (message.type === "system" && message.subtype === "init") {
       newSessionId = message.session_id;
     }
