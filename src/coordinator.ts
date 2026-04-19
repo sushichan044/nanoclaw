@@ -279,7 +279,6 @@ ${workspaceSummary}
             ...(this.authMode === "api-key"
               ? { ANTHROPIC_API_KEY: this.secrets.ANTHROPIC_API_KEY ?? "placeholder" }
               : {
-                  ANTHROPIC_API_KEY: "placeholder",
                   CLAUDE_CODE_OAUTH_TOKEN:
                     this.secrets.CLAUDE_CODE_OAUTH_TOKEN ??
                     this.secrets.ANTHROPIC_AUTH_TOKEN ??
@@ -295,7 +294,10 @@ ${workspaceSummary}
       }
     } catch (err) {
       logger.error({ chatJid, err }, "Coordinator agent error");
-      await this.deps.sendMessage(chatJid, "ヨヨヨ〜 エラーが起きちゃったみたい... ごめんねぇ〜");
+      await this.deps.sendMessage(
+        chatJid,
+        "よよよ〜😌 他のワードを送ってくれたらちゃんとしたお返事ができるかもっ。わわわっと試してみてね☆",
+      );
     } finally {
       this.stopIpcWatcher(chatJid);
       await this.deps.setTyping?.(chatJid, false);
