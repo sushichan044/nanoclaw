@@ -24,6 +24,7 @@ import { readEnvFile } from "./env.js";
 import { resolveGroupFolderPath } from "./group-folder.js";
 import { logger } from "./logger.js";
 import type { WorkspaceManager } from "./workspace-manager.js";
+import { homedir } from "os";
 
 interface CoordinatorRequest {
   requestId: string;
@@ -248,6 +249,10 @@ ${workspaceSummary}
 </active_workspaces>`,
     };
 
+    const gmailConfigHome = path.join(homedir(), ".gmail-mcp");
+    const gmailKey = path.join(gmailConfigHome, "gcp-oauth.keys.json");
+    const cred = path.join(gmailConfigHome, "credentials.json");
+
     try {
       const result = await runAgentCore(stream, {
         cwd: process.cwd(),
@@ -259,9 +264,8 @@ ${workspaceSummary}
         },
         sdkOptions: {
           model: COORDINATOR_MODEL,
-          allowedTools: ["WebSearch", "WebFetch", "mcp__coordinator__*"],
-          permissionMode: "bypassPermissions",
-          allowDangerouslySkipPermissions: true,
+          allowedTools: ["WebSearch", "WebFetch", "mcp__coordinator__*", "mcp__gmail__*"],
+          permissionMode: "auto",
           mcpServers: {
             coordinator: {
               command: "node",
@@ -269,6 +273,14 @@ ${workspaceSummary}
               env: {
                 NANOCLAW_CHAT_JID: chatJid,
                 NANOCLAW_COORDINATOR_IPC_DIR: ipcDir,
+              },
+            },
+            gmail: {
+              command: "npx",
+              args: ["-y", "@gongrzhe/server-gmail-autoauth-mcp"],
+              env: {
+                GMAIL_OAUTH_PATH: gmailKey,
+                GMAIL_CREDENTIALS_PATH: cred,
               },
             },
           },
