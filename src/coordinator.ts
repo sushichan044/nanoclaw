@@ -265,6 +265,12 @@ ${workspaceSummary}
         sdkOptions: {
           model: COORDINATOR_MODEL,
           allowedTools: ["WebSearch", "WebFetch", "mcp__coordinator__*", "mcp__gmail__*"],
+          disallowedTools: [
+            "mcp__gmail__send_email",
+            "mcp__gmail__reply_email",
+            "mcp__gmail__delete_email",
+            "mcp__gmail__batch_delete_emails",
+          ],
           permissionMode: "auto",
           mcpServers: {
             coordinator: {
